@@ -6,15 +6,23 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"slices"
 
 	"github.com/spf13/pflag"
 )
 
 const weatherEnvironmentVariableKey = "OWMAPIKEY"
 
+var availableUnits = [...]string{
+	"imperial",
+	"standard",
+	"metric",
+}
+
 type programArguments struct {
 	apiKey   string
 	location string
+	units    string
 }
 
 func validateArguments(arguments programArguments) (err error) {
@@ -23,6 +31,10 @@ func validateArguments(arguments programArguments) (err error) {
 	}
 	if arguments.apiKey == "" {
 		return errors.New("an openstreetmap api key is required to get the weather")
+	}
+
+	if !slices.Contains(availableUnits[:], arguments.units) {
+		return errors.New("provided units are invalid")
 	}
 	return nil
 }
@@ -42,10 +54,16 @@ func getCommandLineArguments() (arguments programArguments, err error) {
 			weatherEnvironmentVariableKey,
 		),
 	)
+	units := pflag.StringP(
+		"units",
+		"u",
+		availableUnits[0],
+		fmt.Sprintf("The units to use when formatting the output. One of %v", availableUnits),
+	)
 
 	pflag.Parse()
 
-	parsedArguments := programArguments{*apiKey, *location}
+	parsedArguments := programArguments{*apiKey, *location, *units}
 
 	if err := validateArguments(parsedArguments); err != nil {
 		return programArguments{}, err
@@ -95,8 +113,8 @@ func requestLatLonOfLocation(location string, apikey string) (latlon LatLon, err
 	return requestLatLonFromUrl(requestUrl)
 }
 
-func formatWeatherRequest(latlon LatLon, apikey string) (requestUrl string) {
-	return fmt.Sprintf("https://api.openweathermap.org/data/2.5/weather?lat=%f&lon=%f&appid=%s", latlon.Latitude, latlon.Longitude, apikey)
+func formatWeatherRequest(latlon LatLon, apikey string, units string) (requestUrl string) {
+	return fmt.Sprintf("https://api.openweathermap.org/data/2.5/weather?lat=%f&lon=%f&appid=%s&units=%s", latlon.Latitude, latlon.Longitude, apikey, units)
 }
 
 type WeatherResponseMain struct {
@@ -146,8 +164,8 @@ func requestWeatherFromUrl(weatherRequestUrl string) (weather Weather, err error
 	}, nil
 }
 
-func requestWeatherForLatLon(latlon LatLon, apikey string) (weather Weather, err error) {
-	weatherRequestUrl := formatWeatherRequest(latlon, apikey)
+func requestWeatherForLatLon(latlon LatLon, apikey string, weatherUnits string) (weather Weather, err error) {
+	weatherRequestUrl := formatWeatherRequest(latlon, apikey, weatherUnits)
 	return requestWeatherFromUrl(weatherRequestUrl)
 }
 
@@ -172,7 +190,7 @@ func main() {
 	}
 
 	weather, weatherRequestError := requestWeatherForLatLon(
-		locationLatLon, arguments.apiKey,
+		locationLatLon, arguments.apiKey, arguments.units,
 	)
 
 	if weatherRequestError != nil {
