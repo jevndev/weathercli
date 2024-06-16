@@ -19,6 +19,12 @@ var availableUnits = [...]string{
 	"metric",
 }
 
+var unitToTemperatureSuffix = map[string]string{
+	"imperial": "F",
+	"standard": "K",
+	"metric":   "C",
+}
+
 type programArguments struct {
 	apiKey   string
 	location string
@@ -169,8 +175,8 @@ func requestWeatherForLatLon(latlon LatLon, apikey string, weatherUnits string) 
 	return requestWeatherFromUrl(weatherRequestUrl)
 }
 
-func formatWeather(weather Weather) (formattedWeather string) {
-	return fmt.Sprintf("%s, %.2f°", weather.description, weather.temperature)
+func formatWeather(weather Weather, temperatureSuffix string) (formattedWeather string) {
+	return fmt.Sprintf("%s, %.2f°%s", weather.description, weather.temperature, temperatureSuffix)
 }
 
 func main() {
@@ -198,7 +204,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	formattedWeatherString := formatWeather(weather)
+	temperatureSuffix, temperatureSuffixValid := unitToTemperatureSuffix[arguments.units]
+
+	if !temperatureSuffixValid {
+		fmt.Printf("\033[0;31mGot an unexpected unit specification which has no associated temperature suffix\033[0m\n\n")
+		os.Exit(1)
+	}
+
+	formattedWeatherString := formatWeather(weather, temperatureSuffix)
 
 	fmt.Println(formattedWeatherString)
 }
