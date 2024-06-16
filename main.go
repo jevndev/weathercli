@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"slices"
 
@@ -79,7 +80,8 @@ func getCommandLineArguments() (arguments programArguments, err error) {
 }
 
 func formatGeoCodeRequest(locationName string, apiKey string) (geocodeRequestUrl string) {
-	return fmt.Sprintf("http://api.openweathermap.org/geo/1.0/direct?q=%s&limit=1&appid=%s", locationName, apiKey)
+	escapedLocationName := url.QueryEscape(locationName)
+	return fmt.Sprintf("http://api.openweathermap.org/geo/1.0/direct?q=%s&limit=1&appid=%s", escapedLocationName, apiKey)
 }
 
 type LatLon struct {
