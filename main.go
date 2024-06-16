@@ -191,7 +191,7 @@ func main() {
 	locationLatLon, latLonRequestError := requestLatLonOfLocation(arguments.location, arguments.apiKey)
 
 	if latLonRequestError != nil {
-		fmt.Printf("\033[0;31m%v\033[0m\n\n", err.Error())
+		fmt.Printf("%v\033[0m\n\n", latLonRequestError.Error())
 		os.Exit(1)
 	}
 
