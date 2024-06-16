@@ -113,7 +113,9 @@ func requestLatLonFromUrl(geocodeRequestUrl string) (latlon LatLon, err error) {
 		return LatLon{}, errors.New("got an unexpected number of returned locations from openstreetmap")
 	}
 
-	return LatLon{}, nil
+	mostRelevantLatLonResponse := LatLon(responseItems[0])
+
+	return mostRelevantLatLonResponse, nil
 }
 
 func requestLatLonOfLocation(location string, apikey string) (latlon LatLon, err error) {
