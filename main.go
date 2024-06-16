@@ -94,6 +94,67 @@ func requestLatLonOfLocation(location string, apikey string) (latlon LatLon, err
 	requestUrl := formatGeoCodeRequest(location, apikey)
 	return requestLatLonFromUrl(requestUrl)
 }
+
+func formatWeatherRequest(latlon LatLon, apikey string) (requestUrl string) {
+	return fmt.Sprintf("https://api.openweathermap.org/data/2.5/weather?lat=%f&lon=%f&appid=%s", latlon.Latitude, latlon.Longitude, apikey)
+}
+
+type WeatherResponseMain struct {
+	Temp float32 `json:"temp"`
+}
+
+type WeatherResponseWeather struct {
+	Main        string `json:"main"`
+	Description string `json:"description"`
+}
+
+type WeatherResponse struct {
+	MainResponse    WeatherResponseMain      `json:"main"`
+	WeatherResponse []WeatherResponseWeather `json:"weather"`
+}
+
+type Weather struct {
+	temperature float32
+	description string
+}
+
+func requestWeatherFromUrl(weatherRequestUrl string) (weather Weather, err error) {
+	apiResponse, err := http.Get(weatherRequestUrl)
+	if err != nil {
+		return Weather{}, err
+	}
+
+	defer apiResponse.Body.Close()
+
+	var response WeatherResponse
+
+	jsonDecodeErr := json.NewDecoder(apiResponse.Body).Decode(&response)
+
+	if jsonDecodeErr != nil {
+		return Weather{}, err
+	}
+
+	if len(response.WeatherResponse) == 0 {
+		return Weather{}, errors.New("OpenWeatherMap didn't return any weather responses")
+	}
+
+	mostRelevantWeatherResponse := response.WeatherResponse[0]
+
+	return Weather{
+		response.MainResponse.Temp,
+		mostRelevantWeatherResponse.Description,
+	}, nil
+}
+
+func requestWeatherForLatLon(latlon LatLon, apikey string) (weather Weather, err error) {
+	weatherRequestUrl := formatWeatherRequest(latlon, apikey)
+	return requestWeatherFromUrl(weatherRequestUrl)
+}
+
+func formatWeather(weather Weather) (formattedWeather string) {
+	return fmt.Sprintf("%s, %f°", weather.description, weather.temperature)
+}
+
 func main() {
 	arguments, err := getCommandLineArguments()
 	if err != nil {
@@ -109,4 +170,17 @@ func main() {
 		fmt.Printf("\033[0;31m%v\033[0m\n\n", err.Error())
 		os.Exit(1)
 	}
+
+	weather, weatherRequestError := requestWeatherForLatLon(
+		locationLatLon, arguments.apiKey,
+	)
+
+	if weatherRequestError != nil {
+		fmt.Printf("\033[0;31m%v\033[0m\n\n", err.Error())
+		os.Exit(1)
+	}
+
+	formattedWeatherString := formatWeather(weather)
+
+	fmt.Println(formattedWeatherString)
 }
