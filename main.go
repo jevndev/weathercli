@@ -54,8 +54,8 @@ func getCommandLineArguments() (arguments programArguments, err error) {
 	return parsedArguments, nil
 }
 
-func requestGeoCode(locationName string, apiKey string) (resp *http.Response, err error) {
-	return http.Get(fmt.Sprintf("http://api.openweathermap.org/geo/1.0/direct?q=%s&limit=1&appid=%s", locationName, apiKey))
+func formatGeoCodeRequest(locationName string, apiKey string) (geocodeRequestUrl string) {
+	return fmt.Sprintf("http://api.openweathermap.org/geo/1.0/direct?q=%s&limit=1&appid=%s", locationName, apiKey)
 }
 
 type LatLon struct {
@@ -68,8 +68,8 @@ type GeoCodeResponseItem struct {
 	Longitude float64 `json:"lon"`
 }
 
-func requestLatLonOfLocation(locationName string, apiKey string) (latlon LatLon, err error) {
-	apiResponse, err := requestGeoCode(locationName, apiKey)
+func requestLatLonFromUrl(geocodeRequestUrl string) (latlon LatLon, err error) {
+	apiResponse, err := http.Get(geocodeRequestUrl)
 	if err != nil {
 		return LatLon{}, err
 	}
@@ -90,6 +90,10 @@ func requestLatLonOfLocation(locationName string, apiKey string) (latlon LatLon,
 	return LatLon{}, nil
 }
 
+func requestLatLonOfLocation(location string, apikey string) (latlon LatLon, err error) {
+	requestUrl := formatGeoCodeRequest(location, apikey)
+	return requestLatLonFromUrl(requestUrl)
+}
 func main() {
 	arguments, err := getCommandLineArguments()
 	if err != nil {
