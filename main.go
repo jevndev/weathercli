@@ -170,7 +170,7 @@ func requestWeatherForLatLon(latlon LatLon, apikey string, weatherUnits string) 
 }
 
 func formatWeather(weather Weather) (formattedWeather string) {
-	return fmt.Sprintf("%s, %f°", weather.description, weather.temperature)
+	return fmt.Sprintf("%s, %.2f°", weather.description, weather.temperature)
 }
 
 func main() {
