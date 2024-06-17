@@ -204,7 +204,7 @@ func main() {
 	)
 
 	if weatherRequestError != nil {
-		fmt.Printf("\033[0;31m%v\033[0m\n\n", err.Error())
+		fmt.Printf("\033[0;31m%v\033[0m\n\n", weatherRequestError.Error())
 		os.Exit(1)
 	}
 
