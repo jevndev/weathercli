@@ -26,10 +26,21 @@ var unitToTemperatureSuffix = map[string]string{
 	"metric":   "C",
 }
 
+var DescriptionToEmojiMap = map[string]string{
+	"Clear":        "☀️",
+	"Clouds":       "🌤️",
+	"Drizzle":      "🌦️",
+	"Rain":         "🌧️",
+	"Thunderstorm": "⛈️",
+	"Snow":         "🌨️",
+	"Mist":         "🌫️",
+}
+
 type programArguments struct {
-	apiKey   string
-	location string
-	units    string
+	apiKey      string
+	location    string
+	units       string
+	enableEmoji bool
 }
 
 func validateArguments(arguments programArguments) (err error) {
@@ -68,9 +79,16 @@ func getCommandLineArguments() (arguments programArguments, err error) {
 		fmt.Sprintf("The units to use when formatting the output. One of %v", availableUnits),
 	)
 
+	enableEmoji := pflag.BoolP(
+		"enable-emoji",
+		"e",
+		false,
+		"Whether to enable emojis representing the weather condition",
+	)
+
 	pflag.Parse()
 
-	parsedArguments := programArguments{*apiKey, *location, *units}
+	parsedArguments := programArguments{*apiKey, *location, *units, *enableEmoji}
 
 	if err := validateArguments(parsedArguments); err != nil {
 		return programArguments{}, err
@@ -143,6 +161,7 @@ type WeatherResponse struct {
 
 type Weather struct {
 	temperature float32
+	condition   string
 	description string
 }
 
@@ -170,6 +189,7 @@ func requestWeatherFromUrl(weatherRequestUrl string) (weather Weather, err error
 
 	return Weather{
 		response.MainResponse.Temp,
+		mostRelevantWeatherResponse.Main,
 		mostRelevantWeatherResponse.Description,
 	}, nil
 }
@@ -181,6 +201,21 @@ func requestWeatherForLatLon(latlon LatLon, apikey string, weatherUnits string) 
 
 func formatWeather(weather Weather, temperatureSuffix string) (formattedWeather string) {
 	return fmt.Sprintf("%s, %.2f°%s", weather.description, weather.temperature, temperatureSuffix)
+}
+
+func formatWeatherWithEmoji(weather Weather, temperatureSuffix string, emoji string) (formattedWeather string) {
+	return fmt.Sprintf("%s %s, %.2f°%s", emoji, weather.description, weather.temperature, temperatureSuffix)
+}
+
+func makeFormattedWeatherString(weather Weather, temperatureSuffix string, enableEmoji bool) (formattedWeather string) {
+	if enableEmoji {
+		conditionEmoji, conditionInMap := DescriptionToEmojiMap[weather.condition]
+		if !conditionInMap {
+			conditionEmoji = "🛰️"
+		}
+		return formatWeatherWithEmoji(weather, temperatureSuffix, conditionEmoji)
+	}
+	return formatWeather(weather, temperatureSuffix)
 }
 
 func main() {
@@ -215,7 +250,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	formattedWeatherString := formatWeather(weather, temperatureSuffix)
+	formattedWeatherString := makeFormattedWeatherString(weather, temperatureSuffix, arguments.enableEmoji)
 
 	fmt.Println(formattedWeatherString)
 }
